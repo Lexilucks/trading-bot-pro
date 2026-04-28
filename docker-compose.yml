@@ -1,0 +1,102 @@
+version: '3.9'
+
+# =============================================================================
+# Trading Bot Pro - Docker Compose
+# Runs all services: trading bot, analytics dashboard, and VA chatbot
+# =============================================================================
+
+services:
+
+  # ─── VA Chatbot Server ───────────────────────────────────────────────────
+  chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: trading-va-chatbot
+    restart: unless-stopped
+    ports:
+      - "${CHATBOT_PORT:-3002}:3002"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      CHATBOT_PORT: 3002
+      DB_PATH: /app/data/trading.db
+      ACCOUNT_SIZE: ${ACCOUNT_SIZE:-100000}
+      MAX_RISK_PER_TRADE: ${MAX_RISK_PER_TRADE:-0.02}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
+      BOT_API_URL: http://trading-bot:3000
+    volumes:
+      - trading-data:/app/data
+      - trading-logs:/app/trading-logs
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - trading-network
+
+  # ─── Analytics Dashboard ──────────────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: trading-dashboard
+    restart: unless-stopped
+    command: ["node", "server.js"]
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      BOT_API_URL: http://trading-bot:3000
+      LOGS_DIR: /app/trading-logs
+    volumes:
+      - trading-data:/app/data
+      - trading-logs:/app/trading-logs
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/analytics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - trading-network
+
+  # ─── Trading Bot ──────────────────────────────────────────────────────────
+  trading-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: trading-bot
+    restart: unless-stopped
+    command: ["node", "server.js"]
+    ports:
+      - "${BOT_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DB_PATH: /app/data/trading.db
+    volumes:
+      - trading-data:/app/data
+      - trading-logs:/app/trading-logs
+    networks:
+      - trading-network
+
+# ─── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  trading-data:
+    driver: local
+  trading-logs:
+    driver: local
+
+# ─── Networks ────────────────────────────────────────────────────────────────
+networks:
+  trading-network:
+    driver: bridge
