@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+.DS_Store
+dist/
+coverage/
+# Keep trading-logs folder but ignore .log files inside if preferred
+# trading-logs/*.log
