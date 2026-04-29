@@ -1,39 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trading Bot Pro - Analytics Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-  :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --green: #3fb950; --red: #f85149; --blue: #58a6ff; --text: #e6edf3; --muted: #8b949e; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
-        header { background: var(--card); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
-          header h1 { font-size: 1.25rem; font-weight: 700; }
-            header .badge { background: var(--green); color: #000; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
-              .export-btns { display: flex; gap: 8px; }
-                .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 0.85rem; text-decoration: none; color: var(--text); background: var(--card); transition: background 0.2s; }
-                  .btn:hover { background: #21262d; }
-                    .btn-primary { background: var(--blue); border-color: var(--blue); color: #000; font-weight: 600; }
-                      .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
-                        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
-                          .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-                            .stat-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-                              .stat-card .value { font-size: 1.6rem; font-weight: 700; }
-                                .stat-card .value.green { color: var(--green); }
-                                  .stat-card .value.red { color: var(--red); }
-                                    .stat-card .value.blue { color: var(--blue); }
-                                      .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-                                        .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
-                                          .chart-card.full { grid-column: 1 / -1; }
-                                            .chart-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-                                              .chart-wrap { position: relative; height: 220px; }
-                                                .heatmap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; max-height: 220px; overflow-y: auto; }
-                                                  .heatmap-cell { border-radius: 6px; padding: 8px; text-align: center; font-size: 0.75rem; font-weight: 600; }
-                                                    .heatmap-cell .sym { font-size: 0.65rem; color: rgba(255,255,255,0.8); }
-                                                      .heatmap-cell .pnl { font-size: 0.8rem; }
-                                                        .trades-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
                                                           .trades-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
                                                             .trades-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
                                                               .trades-table tr:hover td { background: #21262d; }
