@@ -490,8 +490,8 @@ class VAChatbot extends EventEmitter {
       const result = await method.apply(this.integration, args);
       return result ?? fallback;
     } catch (error) {
-      logger.warn('Integration fallback used', { methodName, error: error.message });
-      return fallback;
+      logger.error('Integration call failed', { methodName, error: error.message });
+      throw error;
     }
   }
 
