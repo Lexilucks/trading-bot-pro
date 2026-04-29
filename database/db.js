@@ -30,7 +30,7 @@ class TradingDatabase {
   }
 
   migrate() {
-    this.db.exec(\`
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS trades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT NOT NULL, side TEXT NOT NULL,
@@ -73,17 +73,17 @@ class TradingDatabase {
       CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades (symbol);
       CREATE INDEX IF NOT EXISTS idx_trades_timestamp ON trades (timestamp);
       CREATE INDEX IF NOT EXISTS idx_trades_status ON trades (status);
-    \`);
+    `);
     logger.debug('Migrations applied');
   }
 
   saveTrade(trade) {
-    return this.db.prepare(\`INSERT INTO trades
+    return this.db.prepare(`INSERT INTO trades
       (symbol,side,qty,entry_price,exit_price,pnl,status,strategy_name,trade_type,
        stop_price,target_price,current_price,stop_distance,execution_ms,exit_reason,timestamp,closed_at)
       VALUES (@symbol,@side,@qty,@entryPrice,@exitPrice,@pnl,@status,@strategyName,@tradeType,
        @stopPrice,@targetPrice,@currentPrice,@stopDistance,@executionMs,@exitReason,@timestamp,@closedAt)
-    \`).run({ symbol:trade.symbol,side:trade.side,qty:trade.qty,entryPrice:trade.entryPrice,
+    `).run({ symbol:trade.symbol,side:trade.side,qty:trade.qty,entryPrice:trade.entryPrice,
       exitPrice:trade.exitPrice??null,pnl:trade.pnl??null,status:trade.status||'open',
       strategyName:trade.strategyName??null,tradeType:trade.tradeType||'paper',
       stopPrice:trade.stopPrice??null,targetPrice:trade.targetPrice??null,
@@ -110,12 +110,12 @@ class TradingDatabase {
   getAllTrades() { return this.getTrades(); }
 
   saveBacktestResult(r) {
-    this.db.prepare(\`INSERT INTO backtest_results
+    this.db.prepare(`INSERT INTO backtest_results
       (symbol,strategy_name,win_rate,profit_factor,sharpe_ratio,max_drawdown,total_trades,
        total_pnl,avg_win,avg_loss,start_date,end_date,parameters,equity_curve,latency_ms)
       VALUES (@symbol,@strategyName,@winRate,@profitFactor,@sharpeRatio,@maxDrawdown,@totalTrades,
        @totalPnl,@avgWin,@avgLoss,@startDate,@endDate,@parameters,@equityCurve,@latencyMs)
-    \`).run({ symbol:r.symbol??null,strategyName:r.strategyName??null,winRate:r.winRate??null,
+    `).run({ symbol:r.symbol??null,strategyName:r.strategyName??null,winRate:r.winRate??null,
       profitFactor:r.profitFactor??null,sharpeRatio:r.sharpeRatio??null,maxDrawdown:r.maxDrawdown??null,
       totalTrades:r.totalTrades??null,totalPnl:r.totalPnl??null,avgWin:r.avgWin??null,
       avgLoss:r.avgLoss??null,startDate:r.startDate??null,endDate:r.endDate??null,
@@ -128,10 +128,10 @@ class TradingDatabase {
   }
 
   saveScanAlerts(alerts) {
-    const ins = this.db.prepare(\`INSERT INTO scan_alerts
+    const ins = this.db.prepare(`INSERT INTO scan_alerts
       (symbol,pattern,strength,volume_ratio,current_price,target_price,stop_price,target_pct,stop_pct,confidence)
       VALUES (@symbol,@pattern,@strength,@volumeRatio,@currentPrice,@targetPrice,@stopPrice,@targetPercent,@stopPercent,@confidence)
-    \`);
+    `);
     this.db.transaction(items => { for (const a of items) ins.run(a); })(alerts);
   }
 
@@ -140,10 +140,10 @@ class TradingDatabase {
   }
 
   saveOptimizerRecommendation(rec) {
-    this.db.prepare(\`INSERT INTO optimizer_recommendations
+    this.db.prepare(`INSERT INTO optimizer_recommendations
       (symbol,strategy_name,grade,score,parameters,improvement,reasoning)
       VALUES (@symbol,@strategyName,@grade,@score,@parameters,@improvement,@reasoning)
-    \`).run({ symbol:rec.symbol??null,strategyName:rec.strategyName??null,grade:rec.grade??null,
+    `).run({ symbol:rec.symbol??null,strategyName:rec.strategyName??null,grade:rec.grade??null,
       score:rec.score??null,parameters:JSON.stringify(rec.parameters||rec.params||{}),
       improvement:rec.improvementPercent??null,reasoning:rec.reasoning??null });
   }
@@ -153,11 +153,11 @@ class TradingDatabase {
   }
 
   saveStrategy(s) {
-    this.db.prepare(\`INSERT INTO strategies (name,params,last_backtest,symbols,updated_at)
+    this.db.prepare(`INSERT INTO strategies (name,params,last_backtest,symbols,updated_at)
       VALUES (@name,@params,@lastBacktest,@symbols,datetime('now'))
       ON CONFLICT(name) DO UPDATE SET params=excluded.params,
         last_backtest=excluded.last_backtest,symbols=excluded.symbols,updated_at=excluded.updated_at
-    \`).run({ name:s.name, params:JSON.stringify(s.params||{}),
+    `).run({ name:s.name, params:JSON.stringify(s.params||{}),
       lastBacktest:JSON.stringify(s.lastBacktest||null), symbols:JSON.stringify(s.symbols||[]) });
   }
 
@@ -175,9 +175,9 @@ class TradingDatabase {
   }
 
   saveAuditEntry(e) {
-    this.db.prepare(\`INSERT INTO audit_log (session_id,action,intent,message,symbol,details)
+    this.db.prepare(`INSERT INTO audit_log (session_id,action,intent,message,symbol,details)
       VALUES (@sessionId,@action,@intent,@message,@symbol,@details)
-    \`).run({ sessionId:e.sessionId??null,action:e.action,intent:e.intent??null,
+    `).run({ sessionId:e.sessionId??null,action:e.action,intent:e.intent??null,
       message:e.message??null,symbol:e.symbol??null,details:JSON.stringify(e) });
   }
 

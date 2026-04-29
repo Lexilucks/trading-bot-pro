@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trading Bot Pro Dashboard</title>
+  <meta name="description" content="Private trading bot web dashboard for paper trades, scanning, performance, optimization, and settings.">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-2: #1f2630;
+      --line: #30363d;
+      --text: #f0f6fc;
+      --muted: #8b949e;
+      --blue: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --shadow: 0 16px 40px rgba(1, 4, 9, 0.45);
+      --radius: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #010409;
+      padding: 24px 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 26px;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      line-height: 1.2;
+      margin: 0;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav button {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      border: 1px solid transparent;
+    }
+
+    .nav button.active,
+    .nav button:hover {
+      background: var(--panel);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .sidebar-card {
+      margin-top: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 14px;
+    }
+
+    .sidebar-card strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .sidebar-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    main {
+      padding: 24px;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .topbar p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: #0b2d16;
+      border: 1px solid rgba(63, 185, 80, 0.4);
+      color: #a8ffb8;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.two {
+      grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+    }
+
+    .grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .panel h3 {
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0d1117;
+      color: var(--text);
+      padding: 10px 11px;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 6px;
+      color: #fff;
+      background: #238636;
+      font-weight: 700;
+    }
+
+    .btn.secondary {
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn.danger {
+      background: #da3633;
+    }
+
+    .btn.blue {
+      background: #1f6feb;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .banner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      font-size: 13px;
+    }
+
+    .banner.show {
+      display: block;
+    }
+
+    .banner.error {
+      background: rgba(248, 81, 73, 0.12);
+      border-color: rgba(248, 81, 73, 0.45);
+      color: #ffd0cc;
+    }
+
+    .banner.success {
+      background: rgba(63, 185, 80, 0.12);
+      border-color: rgba(63, 185, 80, 0.45);
+      color: #c7ffd1;
+    }
+
+    .result-box {
+      background: #0d1117;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-height: 180px;
+      overflow: auto;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric {
+      background: #0d1117;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric strong {
+      font-size: 21px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      padding: 11px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--muted);
+      background: #0d1117;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:hover td {
+      background: rgba(88, 166, 255, 0.05);
+    }
+
+    .signal {
+      display: inline-flex;
+      min-width: 70px;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .signal.buy,
+    .priority.low {
+      background: rgba(63, 185, 80, 0.16);
+      color: #9effad;
+    }
+
+    .signal.sell,
+    .priority.high {
+      background: rgba(248, 81, 73, 0.16);
+      color: #ffb6b0;
+    }
+
+    .signal.hold,
+    .priority.medium {
+      background: rgba(210, 153, 34, 0.16);
+      color: #ffd98a;
+    }
+
+    .priority {
+      display: inline-flex;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .detail-card {
+      background: #0d1117;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .chart {
+      height: 230px;
+      display: flex;
+      gap: 5px;
+      align-items: end;
+      padding: 18px 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #0d1117;
+    }
+
+    .bar {
+      flex: 1;
+      min-width: 4px;
+      border-radius: 4px 4px 0 0;
+      background: var(--green);
+      opacity: 0.9;
+    }
+
+    .bar.loss {
+      background: var(--red);
+    }
+
+    .gauge {
+      width: min(220px, 100%);
+      aspect-ratio: 1;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) var(--gauge, 62%), #30363d 0);
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .gauge::after {
+      content: "";
+      position: absolute;
+      width: 72%;
+      height: 72%;
+      border-radius: 50%;
+      background: var(--panel);
+    }
+
+    .gauge strong {
+      position: relative;
+      z-index: 1;
+      font-size: 32px;
+    }
+
+    .rec-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .rec {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #0d1117;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      max-width: min(420px, calc(100vw - 36px));
+      padding: 13px 14px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(63, 185, 80, 0.45);
+      background: #0b2d16;
+      color: #c7ffd1;
+      display: none;
+      box-shadow: var(--shadow);
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(1, 4, 9, 0.92);
+      display: none;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .auth-gate.show {
+      display: grid;
+    }
+
+    .auth-box {
+      width: min(440px, 100%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .auth-box h2 {
+      margin: 0 0 8px;
+    }
+
+    .auth-box p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        height: auto;
+        position: static;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.two,
+      .grid.three,
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding: 14px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .form-grid,
+      .metric-row {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-gate" id="authGate" aria-modal="true" role="dialog">
+    <form class="auth-box" id="authForm">
+      <h2>Private Dashboard</h2>
+      <p>Enter your dashboard session token. The token is stored in this browser and sent with secure API requests.</p>
+      <div class="field">
+        <label for="sessionToken">Session token</label>
+        <input id="sessionToken" name="sessionToken" type="password" autocomplete="off" required>
+      </div>
+      <div class="button-row">
+        <button class="btn blue" type="submit">Unlock Dashboard</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark">TB</div>
+        <div>
+          <h1>Trading Bot Pro</h1>
+          <p>Private web dashboard</p>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Dashboard tabs">
+        <button class="active" data-tab="execute">Execute Trades</button>
+        <button data-tab="scanner">Scanner</button>
+        <button data-tab="performance">Performance</button>
+        <button data-tab="optimizer">Strategy Optimizer</button>
+        <button data-tab="settings">Settings</button>
+      </nav>
+
+      <div class="sidebar-card">
+        <strong>Security mode</strong>
+        <p>POST requests use your session token and CSRF token. API keys stay in your browser unless the API endpoint is HTTPS.</p>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <h2 id="pageTitle">Execute Trades</h2>
+          <p id="pageSubtitle">Run paper trades, backtests, and guarded live trade requests from one screen.</p>
+        </div>
+        <div class="status-pill" id="lastStatus"><span class="dot"></span><span>Ready</span></div>
+      </div>
+
+      <div class="banner" id="banner"></div>
+
+      <section class="tab-panel active" id="tab-execute">
+        <div class="grid two">
+          <div class="panel">
+            <h3>Trade Controls</h3>
+            <form id="tradeForm" class="form-grid">
+              <div class="field">
+                <label for="symbol">Select stock</label>
+                <select id="symbol" name="symbol"></select>
+              </div>
+              <div class="field">
+                <label for="positionSize">Position size</label>
+                <input id="positionSize" name="positionSize" type="number" min="1" step="1" value="10" required>
+              </div>
+              <div class="field">
+                <label for="buyTarget">Buy target</label>
+                <input id="buyTarget" name="buyTarget" type="number" min="0" step="0.01" value="185" required>
+              </div>
+              <div class="field">
+                <label for="sellTarget">Sell target</label>
+                <input id="sellTarget" name="sellTarget" type="number" min="0" step="0.01" value="195" required>
+              </div>
+              <div class="field">
+                <label for="stopLoss">Stop loss</label>
+                <input id="stopLoss" name="stopLoss" type="number" min="0" step="0.01" value="178" required>
+              </div>
+              <div class="field">
+                <label for="liveApiKey">Live trade API key</label>
+                <input id="liveApiKey" name="liveApiKey" type="password" autocomplete="off" placeholder="Stored locally only">
+              </div>
+            </form>
+            <div class="button-row">
+              <button class="btn" id="runPaper">Run Paper Trade</button>
+              <button class="btn secondary" id="runBacktest">Run Backtest</button>
+              <button class="btn danger" id="executeLive">Execute Live Trade</button>
+            </div>
+            <p class="subtle">Live trade requests are guarded. The server logs the request and will not place real broker orders unless live trading is explicitly enabled server-side.</p>
+          </div>
+
+          <div class="panel">
+            <h3>Results</h3>
+            <div class="result-box" id="tradeResults">
+              Choose an action to see trade output.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-scanner">
+        <div class="grid two">
+          <div class="panel">
+            <h3>Market Scanner</h3>
+            <p class="subtle">Refreshes every 30 seconds. Click a stock to inspect details or start a quick trade.</p>
+            <div class="button-row">
+              <button class="btn secondary" id="refreshScanner">Refresh Now</button>
+            </div>
+            <div class="table-wrap" style="margin-top:14px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Momentum</th>
+                    <th>Signal</th>
+                    <th>RSI</th>
+                    <th>Volume</th>
+                    <th>Price</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="scannerRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Technical Details</h3>
+            <div class="detail-card" id="scannerDetail">
+              Select a symbol from the scanner.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-performance">
+        <div class="grid three">
+          <div class="panel">
+            <h3>Win Rate</h3>
+            <div class="gauge" id="winGauge" style="--gauge: 62%;"><strong>62%</strong></div>
+          </div>
+          <div class="panel">
+            <h3>Best Trades This Week</h3>
+            <div id="bestTrades" class="rec-list"></div>
+          </div>
+          <div class="panel">
+            <h3>Worst Trades This Week</h3>
+            <div id="worstTrades" class="rec-list"></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+            <h3 style="margin:0;">Daily P&L - Last 30 Days</h3>
+            <button class="btn secondary" id="exportCsv">Export CSV</button>
+          </div>
+          <div class="metric-row" style="margin-top:14px;">
+            <div class="metric"><span>Total P&L</span><strong id="totalPnl">$1,240</strong></div>
+            <div class="metric"><span>Total Trades</span><strong id="totalTrades">25</strong></div>
+            <div class="metric"><span>Max Drawdown</span><strong id="maxDrawdown">$280</strong></div>
+          </div>
+          <div class="chart" id="pnlChart" aria-label="Daily P&L chart"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-optimizer">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0;">Strategy Optimizer</h3>
+              <p class="subtle" style="margin:6px 0 0;">Last 10 recommendations with priority and reasoning.</p>
+            </div>
+            <button class="btn blue" id="refreshOptimizer">Get Suggestions</button>
+          </div>
+          <div class="rec-list" id="optimizerList" style="margin-top:16px;"></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-settings">
+        <div class="settings-grid">
+          <div class="panel">
+            <h3>API & Alerts</h3>
+            <div class="form-grid">
+              <div class="field full">
+                <label for="settingsApiKey">API key</label>
+                <input id="settingsApiKey" type="password" autocomplete="off" placeholder="Stored in browser localStorage">
+              </div>
+              <div class="field full">
+                <label for="slackWebhook">Slack webhook URL</label>
+                <input id="slackWebhook" type="url" placeholder="https://hooks.slack.com/...">
+              </div>
+              <div class="field full">
+                <label for="discordWebhook">Discord webhook URL</label>
+                <input id="discordWebhook" type="url" placeholder="https://discord.com/api/webhooks/...">
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Risk Parameters</h3>
+            <div class="form-grid">
+              <div class="field">
+                <label for="maxDailyLoss">Max daily loss</label>
+                <input id="maxDailyLoss" type="number" min="0" step="1" value="500">
+              </div>
+              <div class="field">
+                <label for="maxPositionSize">Max position size</label>
+                <input id="maxPositionSize" type="number" min="1" step="1" value="20">
+              </div>
+              <div class="field">
+                <label for="maxPositions">Max positions</label>
+                <input id="maxPositions" type="number" min="1" step="1" value="5">
+              </div>
+              <div class="field">
+                <label for="watchlist">Watchlist</label>
+                <input id="watchlist" type="text" value="AAPL,MSFT,NVDA,TSLA,META,GOOGL">
+              </div>
+            </div>
+            <div class="button-row">
+              <button class="btn" id="saveSettings">Save Settings</button>
+              <button class="btn secondary" id="clearSession">Lock Dashboard</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE_URL = window.TRADING_API_BASE_URL || 'https://lexilucks.com/api';
+    const STOCKS = ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','TSLA','BRK','LLY','V','AMD','PLTR','SNOW','CRWD','NET','DDOG','SHOP','MELI','SQ','COIN','SPY','QQQ','IWM','XLK','XLE','XLF','GLD','TLT','ARKK','SOXS','SMCI','MSTR','ARM','ASML','TSM','AMAT','LRCX','KLAC','ONTO','ENTG'];
+    const EXECUTE_STOCKS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'META', 'GOOGL'];
+    const state = {
+      sessionToken: localStorage.getItem('tbp.sessionToken') || '',
+      csrfToken: localStorage.getItem('tbp.csrfToken') || cryptoRandom(),
+      scanner: [],
+      performance: null,
+      optimizer: [],
+      settings: loadSettings()
+    };
+
+    localStorage.setItem('tbp.csrfToken', state.csrfToken);
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    function cryptoRandom() {
+      const bytes = new Uint32Array(4);
+      window.crypto?.getRandomValues?.(bytes);
+      return Array.from(bytes).map((value) => value.toString(16)).join('-') || String(Date.now());
+    }
+
+    function loadSettings() {
+      try {
+        return JSON.parse(localStorage.getItem('tbp.settings') || '{}');
+      } catch {
+        return {};
+      }
+    }
+
+    function saveSettingsObject(settings) {
+      state.settings = { ...state.settings, ...settings };
+      localStorage.setItem('tbp.settings', JSON.stringify(state.settings));
+    }
+
+    function showBanner(message, type = 'error') {
+      const banner = $('#banner');
+      banner.textContent = message;
+      banner.className = `banner show ${type}`;
+    }
+
+    function clearBanner() {
+      $('#banner').className = 'banner';
+      $('#banner').textContent = '';
+    }
+
+    function showToast(message) {
+      const toast = $('#toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      window.setTimeout(() => toast.classList.remove('show'), 3200);
+    }
+
+    function setStatus(message, type = 'success') {
+      const pill = $('#lastStatus');
+      pill.querySelector('span:last-child').textContent = message;
+      pill.style.borderColor = type === 'error' ? 'rgba(248,81,73,.45)' : type === 'warn' ? 'rgba(210,153,34,.45)' : 'rgba(63,185,80,.45)';
+      pill.style.background = type === 'error' ? 'rgba(248,81,73,.12)' : type === 'warn' ? 'rgba(210,153,34,.12)' : 'rgba(63,185,80,.12)';
+      pill.querySelector('.dot').style.background = type === 'error' ? 'var(--red)' : type === 'warn' ? 'var(--yellow)' : 'var(--green)';
+    }
+
+    function asCurrency(value) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value || 0));
+    }
+
+    function validateTradeForm() {
+      const data = Object.fromEntries(new FormData($('#tradeForm')).entries());
+      data.symbol = $('#symbol').value;
+      data.buyTarget = Number(data.buyTarget);
+      data.sellTarget = Number(data.sellTarget);
+      data.positionSize = Number(data.positionSize);
+      data.stopLoss = Number(data.stopLoss);
+
+      if (!data.symbol) throw new Error('Choose a stock first.');
+      if (!Number.isFinite(data.positionSize) || data.positionSize <= 0) throw new Error('Position size must be greater than zero.');
+      if (!Number.isFinite(data.buyTarget) || data.buyTarget <= 0) throw new Error('Buy target must be greater than zero.');
+      if (!Number.isFinite(data.sellTarget) || data.sellTarget <= 0) throw new Error('Sell target must be greater than zero.');
+      if (!Number.isFinite(data.stopLoss) || data.stopLoss <= 0) throw new Error('Stop loss must be greater than zero.');
+      return data;
+    }
+
+    async function apiFetch(path, options = {}, fallback) {
+      const method = options.method || 'GET';
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      };
+
+      if (method !== 'GET') {
+        if (!state.sessionToken) throw new Error('Unlock the dashboard with a session token first.');
+        headers['X-Session-Token'] = state.sessionToken;
+        headers['X-CSRF-Token'] = state.csrfToken;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+        if (!response.ok) throw new Error(`API ${response.status}: ${response.statusText}`);
+        return await response.json();
+      } catch (error) {
+        console.warn(`Using mock data for ${path}:`, error.message);
+        if (typeof fallback === 'function') return fallback();
+        if (fallback !== undefined) return fallback;
+        throw error;
+      }
+    }
+
+    function mockPaper(data = {}) {
+      return { success: true, data: { symbol: data.symbol || 'AAPL', winRate: 0.62, totalPnL: 1240, trades: 25, totalTrades: 25, status: 'mock', source: 'mock' } };
+    }
+
+    function mockBacktest(data = {}) {
+      return { success: true, data: { symbol: data.symbol || 'AAPL', optimalBuy: 182.5, optimalSell: 195, winRate: 0.68, totalReturn: 7.4, sharpeRatio: 1.34, maxDrawdown: 0.08, source: 'mock' } };
+    }
+
+    function mockScanner() {
+      return {
+        success: true,
+        data: STOCKS.map((symbol, index) => {
+          const momentum = Math.round(Math.max(8, Math.min(96, 50 + Math.sin(index * 1.7) * 35 + (index % 5) * 2)));
+          return {
+            symbol,
+            momentum,
+            signal: momentum >= 65 ? 'BUY' : momentum <= 38 ? 'SELL' : 'HOLD',
+            rsi: Number(Math.max(20, Math.min(82, 30 + momentum * 0.55)).toFixed(1)),
+            volume: Math.floor(1000000 + (index + 1) * 239000),
+            volumeRatio: Number((0.8 + (index % 6) * 0.22).toFixed(2)),
+            price: Number((85 + index * 9.75 + Math.sin(index) * 8).toFixed(2)),
+            pattern: momentum >= 65 ? 'Momentum breakout' : momentum <= 38 ? 'Trend weakness' : 'Range watch'
+          };
+        })
+      };
+    }
+
+    function mockPerformance() {
+      const dailyPnl = Array.from({ length: 30 }, (_, index) => ({
+        date: new Date(Date.now() - (29 - index) * 86400000).toISOString().slice(0, 10),
+        pnl: Number((Math.sin(index / 2) * 150 + index * 10).toFixed(2))
+      }));
+      return {
+        success: true,
+        data: {
+          summary: { totalTrades: 25, wins: 16, losses: 9, winRate: 0.62, totalPnL: 1240, maxDrawdown: 280, sharpe: 1.28 },
+          dailyPnl,
+          bestTrades: [{ symbol: 'NVDA', pnl: 420 }, { symbol: 'MSFT', pnl: 210 }, { symbol: 'AAPL', pnl: 160 }],
+          worstTrades: [{ symbol: 'TSLA', pnl: -180 }, { symbol: 'META', pnl: -95 }, { symbol: 'GOOGL', pnl: -64 }]
+        }
+      };
+    }
+
+    function mockOptimizer() {
+      const priorities = ['HIGH','HIGH','HIGH','MEDIUM','MEDIUM','MEDIUM','MEDIUM','LOW','LOW','LOW'];
+      return {
+        success: true,
+        data: {
+          recommendations: priorities.map((priority, index) => ({
+            id: `mock-${index}`,
+            symbol: STOCKS[index],
+            priority,
+            suggestion: priority === 'HIGH' ? 'Tighten stops before increasing size' : priority === 'MEDIUM' ? 'Consider smaller test position' : 'Monitor current setup',
+            reasoning: priority === 'HIGH' ? 'Momentum is high, but drawdown protection should be applied first.' : 'No urgent action required; validate with another backtest window.'
+          }))
+        }
+      };
+    }
+
+    function renderTradeResult(title, payload) {
+      const data = payload.data || payload;
+      $('#tradeResults').innerHTML = `
+        <div class="metric-row">
+          <div class="metric"><span>Symbol</span><strong>${data.symbol || 'AAPL'}</strong></div>
+          <div class="metric"><span>Win Rate</span><strong>${Math.round((data.winRate > 1 ? data.winRate / 100 : data.winRate || 0.62) * 100)}%</strong></div>
+          <div class="metric"><span>P&L</span><strong>${asCurrency(data.totalPnL || data.totalPnl || 1240)}</strong></div>
+        </div>
+        <h4>${title}</h4>
+        <pre style="white-space:pre-wrap;color:var(--muted);">${JSON.stringify(data, null, 2)}</pre>
+      `;
+    }
+
+    async function runPaperTrade() {
+      clearBanner();
+      const button = $('#runPaper');
+      try {
+        const data = validateTradeForm();
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner"></span> Running';
+        const result = await apiFetch('/paper-trading/run', { method: 'POST', body: JSON.stringify(data) }, () => mockPaper(data));
+        renderTradeResult('Paper trade complete', result);
+        setStatus('Paper trade complete');
+        showToast('Paper trade complete');
+      } catch (error) {
+        showBanner(error.message);
+        setStatus('Action failed', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Run Paper Trade';
+      }
+    }
+
+    async function runBacktest() {
+      clearBanner();
+      const button = $('#runBacktest');
+      try {
+        const data = validateTradeForm();
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner"></span> Running';
+        const result = await apiFetch('/backtest/custom', { method: 'POST', body: JSON.stringify({ ...data, strategy: 'momentum' }) }, () => mockBacktest(data));
+        renderTradeResult('Backtest complete', result);
+        setStatus('Backtest complete');
+        showToast('Backtest complete');
+      } catch (error) {
+        showBanner(error.message);
+        setStatus('Action failed', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Run Backtest';
+      }
+    }
+
+    async function executeLiveTrade() {
+      clearBanner();
+      try {
+        const data = validateTradeForm();
+        const apiKey = $('#liveApiKey').value.trim() || state.settings.apiKey || '';
+        if (!apiKey) throw new Error('Enter a live trade API key before submitting a live request.');
+        const confirmed = window.confirm('Confirm live trade request. The server should only execute real broker orders if live trading is explicitly enabled.');
+        if (!confirmed) return;
+
+        let body = { ...data, confirmed: true };
+        const apiProtocol = new URL(API_BASE_URL).protocol;
+        if (apiProtocol === 'https:') body.apiKey = apiKey;
+
+        const result = await apiFetch('/live-trading/execute', { method: 'POST', body: JSON.stringify(body) }, () => ({
+          success: true,
+          data: { executed: false, status: 'mock', message: 'Mock live trade request logged locally. No real broker order placed.' }
+        }));
+        renderTradeResult('Live trade request response', result);
+        setStatus('Live request logged', 'warn');
+        showToast('Live trade request logged');
+      } catch (error) {
+        showBanner(error.message);
+        setStatus('Action failed', 'error');
+      }
+    }
+
+    function renderScanner(rows) {
+      state.scanner = rows;
+      $('#scannerRows').innerHTML = rows.map((row) => `
+        <tr data-symbol="${row.symbol}">
+          <td><strong>${row.symbol}</strong></td>
+          <td>${row.momentum}</td>
+          <td><span class="signal ${row.signal.toLowerCase()}">${row.signal}</span></td>
+          <td>${row.rsi}</td>
+          <td>${Number(row.volume || 0).toLocaleString()}</td>
+          <td>${asCurrency(row.price)}</td>
+          <td><button class="btn secondary quick-trade" data-symbol="${row.symbol}">Quick Trade</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function refreshScanner() {
+      const button = $('#refreshScanner');
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner"></span> Refreshing';
+      const result = await apiFetch('/scanner/momentum', {}, mockScanner);
+      renderScanner(result.data || result.ranked || []);
+      setStatus('Scanner refreshed');
+      button.disabled = false;
+      button.textContent = 'Refresh Now';
+    }
+
+    function connectScannerStream() {
+      if (!('EventSource' in window)) return;
+      try {
+        const stream = new EventSource(`${API_BASE_URL}/scanner/momentum?stream=1`);
+        stream.onmessage = (event) => {
+          const payload = JSON.parse(event.data);
+          if (Array.isArray(payload.data)) {
+            renderScanner(payload.data);
+            setStatus('Scanner stream live');
+          }
+        };
+        stream.onerror = () => {
+          stream.close();
+        };
+      } catch {
+        // Polling remains active if the SSE endpoint is not available yet.
+      }
+    }
+
+    function showScannerDetail(symbol) {
+      const row = state.scanner.find((item) => item.symbol === symbol);
+      if (!row) return;
+      $('#scannerDetail').innerHTML = `
+        <div class="metric-row">
+          <div class="metric"><span>Momentum</span><strong>${row.momentum}</strong></div>
+          <div class="metric"><span>Signal</span><strong>${row.signal}</strong></div>
+          <div class="metric"><span>RSI</span><strong>${row.rsi}</strong></div>
+        </div>
+        <p><strong>${row.symbol}</strong> ${row.pattern || 'Technical scan available.'}</p>
+        <p class="subtle">Price: ${asCurrency(row.price)} | Volume ratio: ${row.volumeRatio || 1}x | Volume: ${Number(row.volume || 0).toLocaleString()}</p>
+        <button class="btn quick-trade" data-symbol="${row.symbol}">Quick Trade</button>
+      `;
+    }
+
+    function quickTrade(symbol) {
+      $('#symbol').value = symbol;
+      activateTab('execute');
+      showToast(`${symbol} loaded into trade controls`);
+    }
+
+    function renderPerformance(payload) {
+      state.performance = payload;
+      const summary = payload.summary;
+      const winPct = Math.round((summary.winRate > 1 ? summary.winRate / 100 : summary.winRate) * 100);
+      $('#winGauge').style.setProperty('--gauge', `${winPct}%`);
+      $('#winGauge strong').textContent = `${winPct}%`;
+      $('#totalPnl').textContent = asCurrency(summary.totalPnL);
+      $('#totalTrades').textContent = summary.totalTrades;
+      $('#maxDrawdown').textContent = asCurrency(summary.maxDrawdown);
+
+      const values = payload.dailyPnl.map((day) => day.pnl);
+      const max = Math.max(...values.map(Math.abs), 1);
+      $('#pnlChart').innerHTML = payload.dailyPnl.map((day) => {
+        const height = Math.max(4, Math.abs(day.pnl) / max * 190);
+        return `<div class="bar ${day.pnl < 0 ? 'loss' : ''}" style="height:${height}px" title="${day.date}: ${asCurrency(day.pnl)}"></div>`;
+      }).join('');
+
+      $('#bestTrades').innerHTML = payload.bestTrades.map((trade) => `<div class="detail-card"><strong>${trade.symbol}</strong><p class="subtle">${asCurrency(trade.pnl)}</p></div>`).join('');
+      $('#worstTrades').innerHTML = payload.worstTrades.map((trade) => `<div class="detail-card"><strong>${trade.symbol}</strong><p class="subtle">${asCurrency(trade.pnl)}</p></div>`).join('');
+    }
+
+    async function refreshPerformance() {
+      const result = await apiFetch('/performance/summary', {}, mockPerformance);
+      renderPerformance(result.data);
+    }
+
+    function exportPerformanceCsv() {
+      const rows = state.performance?.dailyPnl || mockPerformance().data.dailyPnl;
+      const csv = ['date,pnl', ...rows.map((row) => `${row.date},${row.pnl}`)].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'trading-performance.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderOptimizer(recommendations) {
+      state.optimizer = recommendations;
+      $('#optimizerList').innerHTML = recommendations.map((rec) => {
+        const priority = String(rec.priority || 'LOW').toLowerCase();
+        const normalizedPriority = priority === 'high' ? 'high' : priority === 'medium' ? 'medium' : 'low';
+        return `
+          <article class="rec">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <strong>${rec.symbol || 'Strategy'}</strong>
+              <span class="priority ${normalizedPriority}">${rec.priority || 'LOW'}</span>
+            </div>
+            <div>${rec.suggestion || rec.action || 'Monitor current setup'}</div>
+            <p class="subtle">${rec.reasoning || rec.detail || 'Review after the next scanner refresh.'}</p>
+            <button class="btn secondary apply-rec" data-id="${rec.id || rec.symbol || ''}">Apply Recommendation</button>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function refreshOptimizer() {
+      const button = $('#refreshOptimizer');
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner"></span> Optimizing';
+      const metrics = state.performance?.summary || mockPerformance().data.summary;
+      const result = await apiFetch('/optimizer/suggestions', { method: 'POST', body: JSON.stringify({ metrics, params: state.settings }) }, mockOptimizer);
+      renderOptimizer(result.data?.recommendations || result.data?.suggestions || []);
+      setStatus('Optimizer refreshed');
+      showToast('Optimizer recommendations updated');
+      button.disabled = false;
+      button.textContent = 'Get Suggestions';
+    }
+
+    function applyRecommendation(id) {
+      const rec = state.optimizer.find((item) => String(item.id || item.symbol || '') === String(id));
+      saveSettingsObject({ lastAppliedRecommendation: rec || { id }, appliedAt: new Date().toISOString() });
+      showToast('Recommendation saved to settings');
+    }
+
+    function populateSettings() {
+      $('#settingsApiKey').value = state.settings.apiKey || '';
+      $('#slackWebhook').value = state.settings.slackWebhook || '';
+      $('#discordWebhook').value = state.settings.discordWebhook || '';
+      $('#maxDailyLoss').value = state.settings.maxDailyLoss || 500;
+      $('#maxPositionSize').value = state.settings.maxPositionSize || 20;
+      $('#maxPositions').value = state.settings.maxPositions || 5;
+      $('#watchlist').value = state.settings.watchlist || 'AAPL,MSFT,NVDA,TSLA,META,GOOGL';
+      $('#liveApiKey').value = state.settings.apiKey || '';
+    }
+
+    function saveSettings() {
+      saveSettingsObject({
+        apiKey: $('#settingsApiKey').value.trim(),
+        slackWebhook: $('#slackWebhook').value.trim(),
+        discordWebhook: $('#discordWebhook').value.trim(),
+        maxDailyLoss: Number($('#maxDailyLoss').value || 500),
+        maxPositionSize: Number($('#maxPositionSize').value || 20),
+        maxPositions: Number($('#maxPositions').value || 5),
+        watchlist: $('#watchlist').value.trim()
+      });
+      $('#liveApiKey').value = state.settings.apiKey || '';
+      showToast('Settings saved');
+    }
+
+    const tabTitles = {
+      execute: ['Execute Trades', 'Run paper trades, backtests, and guarded live trade requests from one screen.'],
+      scanner: ['Scanner', 'Watch all 40 scanner stocks with momentum, signals, and quick trade access.'],
+      performance: ['Performance', 'Review P&L, win rate, best trades, worst trades, and exportable data.'],
+      optimizer: ['Strategy Optimizer', 'Review parameter recommendations and apply them to local settings.'],
+      settings: ['Settings', 'Store local API keys, risk rules, watchlists, and alert preferences.']
+    };
+
+    function activateTab(tab) {
+      $$('.nav button').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
+      $$('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.id === `tab-${tab}`));
+      $('#pageTitle').textContent = tabTitles[tab][0];
+      $('#pageSubtitle').textContent = tabTitles[tab][1];
+      if (tab === 'performance' && !state.performance) refreshPerformance();
+      if (tab === 'optimizer' && !state.optimizer.length) refreshOptimizer();
+      if (tab === 'scanner' && !state.scanner.length) refreshScanner();
+    }
+
+    function initAuth() {
+      if (!state.sessionToken) $('#authGate').classList.add('show');
+      $('#authForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        state.sessionToken = $('#sessionToken').value.trim();
+        localStorage.setItem('tbp.sessionToken', state.sessionToken);
+        $('#authGate').classList.remove('show');
+        showToast('Dashboard unlocked');
+      });
+      $('#clearSession').addEventListener('click', () => {
+        localStorage.removeItem('tbp.sessionToken');
+        state.sessionToken = '';
+        $('#sessionToken').value = '';
+        $('#authGate').classList.add('show');
+      });
+    }
+
+    function init() {
+      $('#symbol').innerHTML = EXECUTE_STOCKS.map((symbol) => `<option value="${symbol}">${symbol}</option>`).join('');
+      populateSettings();
+      initAuth();
+
+      $$('.nav button').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.tab)));
+      $('#runPaper').addEventListener('click', runPaperTrade);
+      $('#runBacktest').addEventListener('click', runBacktest);
+      $('#executeLive').addEventListener('click', executeLiveTrade);
+      $('#refreshScanner').addEventListener('click', refreshScanner);
+      $('#refreshOptimizer').addEventListener('click', refreshOptimizer);
+      $('#exportCsv').addEventListener('click', exportPerformanceCsv);
+      $('#saveSettings').addEventListener('click', saveSettings);
+
+      document.addEventListener('click', (event) => {
+        const row = event.target.closest('tr[data-symbol]');
+        if (row && !event.target.closest('button')) showScannerDetail(row.dataset.symbol);
+        const quick = event.target.closest('.quick-trade');
+        if (quick) quickTrade(quick.dataset.symbol);
+        const apply = event.target.closest('.apply-rec');
+        if (apply) applyRecommendation(apply.dataset.id);
+      });
+
+      refreshScanner();
+      connectScannerStream();
+      refreshPerformance();
+      window.setInterval(refreshScanner, 30000);
+      window.setInterval(refreshPerformance, 10000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,239 +1,285 @@
 'use strict';
 
 /**
- * session-manager.js
- * Manages multi-turn conversation state for the VA chatbot.
- * Stores user context, symbol preferences, risk parameters, etc.
- * Persists sessions to a JSON file; clears sessions older than 24 hours.
+ * Multi-turn session manager for the trading VA chatbot.
+ * Persists JSON sessions and removes inactive sessions after 24 hours.
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { createLogger } = require('../utils/logger');
 
 const logger = createLogger('SessionManager');
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
-const SESSION_FILE = path.resolve(__dirname, '../data/sessions.json');
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// In-memory session store (backed by JSON file)
-let _sessions = {};
-
-// ---------------------------------------------------------------------------
-// File I/O helpers
-// ---------------------------------------------------------------------------
-
-function _ensureDataDir() {
-    const dir = path.dirname(SESSION_FILE);
-    if (!fs.existsSync(dir)) {
-          fs.mkdirSync(dir, { recursive: true });
-    }
+function defaultSessionFile() {
+  if (process.env.NODE_ENV === 'test') {
+    return path.join(os.tmpdir(), `trading-bot-sessions-${process.pid}-${Date.now()}-${Math.random()}.json`);
+  }
+  return path.resolve(process.env.SESSION_FILE || './data/sessions.json');
 }
 
-function _load() {
+function now() {
+  return Date.now();
+}
+
+function ensureDir(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+class SessionRecord {
+  constructor(data, manager) {
+    this.id = data.id;
+    this.createdAt = data.createdAt;
+    this.updatedAt = data.updatedAt;
+    this.context = data.context || {};
+    this.manager = manager;
+  }
+
+  addTurn(turn = {}) {
+    const history = Array.isArray(this.context.conversationHistory)
+      ? this.context.conversationHistory
+      : [];
+    history.push({
+      ...turn,
+      timestamp: turn.timestamp || new Date().toISOString(),
+    });
+    this.context.conversationHistory = history.slice(-50);
+    this.updatedAt = now();
+    this.manager.saveSession(this);
+    return this;
+  }
+
+  get turns() {
+    return this.context.conversationHistory || [];
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+      context: this.context,
+    };
+  }
+}
+
+class SessionManager {
+  constructor(options = {}) {
+    this.sessionFile = path.resolve(options.sessionFile || defaultSessionFile());
+    this.ttlMs = options.ttlMs || SESSION_TTL_MS;
+    this.sessions = new Map();
+    this.load();
+    this.clearExpiredSessions();
+
+    if (!options.disableCleanupTimer) {
+      this.cleanupTimer = setInterval(() => this.clearExpiredSessions(), 60 * 60 * 1000);
+      this.cleanupTimer.unref?.();
+    }
+  }
+
+  load() {
     try {
-          _ensureDataDir();
-          if (!fs.existsSync(SESSION_FILE)) {
-                  _sessions = {};
-                  return;
-          }
-          const raw = fs.readFileSync(SESSION_FILE, 'utf8');
-          _sessions = JSON.parse(raw);
-    } catch (err) {
-          logger.warn(`Could not load sessions file: ${err.message}`);
-          _sessions = {};
-    }
-}
+      ensureDir(this.sessionFile);
+      if (!fs.existsSync(this.sessionFile)) {
+        this.sessions.clear();
+        return;
+      }
 
-function _save() {
+      const raw = fs.readFileSync(this.sessionFile, 'utf8');
+      if (!raw.trim()) {
+        this.sessions.clear();
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
+      this.sessions.clear();
+      for (const data of entries) {
+        if (data?.id) this.sessions.set(data.id, new SessionRecord(data, this));
+      }
+    } catch (error) {
+      logger.warn('Could not load sessions file', { error: error.message, sessionFile: this.sessionFile });
+      this.sessions.clear();
+    }
+  }
+
+  persist() {
     try {
-          _ensureDataDir();
-          fs.writeFileSync(SESSION_FILE, JSON.stringify(_sessions, null, 2), 'utf8');
-    } catch (err) {
-          logger.error(`Could not save sessions file: ${err.message}`);
+      ensureDir(this.sessionFile);
+      const data = {};
+      for (const [id, session] of this.sessions.entries()) {
+        data[id] = session.toJSON();
+      }
+      fs.writeFileSync(this.sessionFile, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+      logger.error('Could not persist sessions', { error: error.message, sessionFile: this.sessionFile });
     }
-}
+  }
 
-// ---------------------------------------------------------------------------
-// Session expiry
-// ---------------------------------------------------------------------------
+  defaultContext(initialContext = {}) {
+    return {
+      watchlist: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'META', 'GOOGL'],
+      riskParams: {
+        maxDailyLoss: 500,
+        maxPositionSize: 20,
+        maxPositions: 5,
+        defaultStopLoss: 0.05,
+      },
+      symbolPreferences: [],
+      lastSymbol: null,
+      lastStrategy: null,
+      lastAction: null,
+      conversationHistory: [],
+      ...clone(initialContext),
+    };
+  }
 
-function _purgeExpired() {
-    const now = Date.now();
-    let purged = 0;
-    for (const [id, session] of Object.entries(_sessions)) {
-          if (now - session.updatedAt > SESSION_TTL_MS) {
-                  delete _sessions[id];
-                  purged++;
-          }
-    }
-    if (purged > 0) {
-          logger.info(`Purged ${purged} expired session(s)`);
-          _save();
-    }
-}
-
-// Load persisted sessions on module init
-_load();
-_purgeExpired();
-
-// Run expiry cleanup every hour
-setInterval(() => {
-    _purgeExpired();
-}, 60 * 60 * 1000).unref();
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Create a new session for a user.
- * @param {string} [userId] - Optional user ID. Generates one if not provided.
- * @param {Object} [initialContext] - Initial context to store.
- * @returns {Object} The newly created session.
- */
-function createSession(userId, initialContext = {}) {
+  createSession(userId, initialContext = {}) {
     const id = userId || crypto.randomUUID();
-    const now = Date.now();
+    const stamp = now();
+    const session = new SessionRecord({
+      id,
+      createdAt: stamp,
+      updatedAt: stamp,
+      context: this.defaultContext(initialContext),
+    }, this);
 
-  const session = {
-        id,
-        createdAt: now,
-        updatedAt: now,
-        context: {
-                // Default user preferences
-          watchlist: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'META', 'GOOGL'],
-                riskParams: {
-                          maxDailyLoss: 500,
-                          maxPositionSize: 20,
-                          maxPositions: 5,
-                          defaultStopLoss: 0.05
-                },
-                lastSymbol: null,
-                lastAction: null,
-                conversationHistory: [],
-                ...initialContext
-        }
-  };
-
-  _sessions[id] = session;
-    _save();
-    logger.info(`Session created: ${id}`);
+    this.sessions.set(id, session);
+    this.persist();
+    logger.info('Session created', { sessionId: id });
     return session;
+  }
+
+  updateSession(sessionId, updates = {}) {
+    const session = this.getSession(sessionId);
+    if (!session) {
+      logger.warn('Cannot update missing session', { sessionId });
+      return null;
+    }
+
+    session.context = {
+      ...session.context,
+      ...clone(updates),
+      riskParams: {
+        ...(session.context.riskParams || {}),
+        ...(updates.riskParams || {}),
+      },
+    };
+    session.updatedAt = now();
+    this.saveSession(session);
+    return session;
+  }
+
+  getSession(sessionId) {
+    if (!sessionId) return null;
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+
+    if (now() - session.updatedAt > this.ttlMs) {
+      this.sessions.delete(sessionId);
+      this.persist();
+      logger.info('Expired session removed', { sessionId });
+      return null;
+    }
+
+    return session;
+  }
+
+  getOrCreate(sessionId = 'default', initialContext = {}) {
+    return this.getSession(sessionId) || this.createSession(sessionId, initialContext);
+  }
+
+  getOrCreateSession(sessionId = 'default', initialContext = {}) {
+    return this.getOrCreate(sessionId, initialContext);
+  }
+
+  saveSession(session) {
+    const record = session instanceof SessionRecord ? session : new SessionRecord(session, this);
+    this.sessions.set(record.id, record);
+    this.persist();
+    return record;
+  }
+
+  appendMessage(sessionId, role, content) {
+    const session = this.getOrCreate(sessionId);
+    session.addTurn({ role, content });
+    return session;
+  }
+
+  deleteSession(sessionId) {
+    const deleted = this.sessions.delete(sessionId);
+    if (deleted) this.persist();
+    return deleted;
+  }
+
+  clearExpiredSessions() {
+    const cutoff = now() - this.ttlMs;
+    let count = 0;
+
+    for (const [id, session] of this.sessions.entries()) {
+      if (session.updatedAt < cutoff) {
+        this.sessions.delete(id);
+        count += 1;
+      }
+    }
+
+    if (count > 0) {
+      logger.info('Expired sessions cleared', { count });
+      this.persist();
+    }
+
+    return count;
+  }
+
+  get activeSessionCount() {
+    this.clearExpiredSessions();
+    return this.sessions.size;
+  }
 }
 
-/**
- * Update an existing session's context.
- * @param {string} sessionId - Session ID to update.
- * @param {Object} updates - Partial context updates to merge.
- * @returns {Object|null} Updated session or null if not found.
- */
+const defaultManager = new SessionManager();
+
+function createSession(userId, initialContext = {}) {
+  return defaultManager.createSession(userId, initialContext);
+}
+
 function updateSession(sessionId, updates = {}) {
-    const session = _sessions[sessionId];
-    if (!session) {
-          logger.warn(`updateSession: session not found: ${sessionId}`);
-          return null;
-    }
-
-  session.updatedAt = Date.now();
-    session.context = { ...session.context, ...updates };
-
-  // Keep conversation history bounded to last 50 turns
-  if (Array.isArray(session.context.conversationHistory) &&
-            session.context.conversationHistory.length > 50) {
-        session.context.conversationHistory =
-                session.context.conversationHistory.slice(-50);
-  }
-
-  _save();
-    logger.debug(`Session updated: ${sessionId}`);
-    return session;
+  return defaultManager.updateSession(sessionId, updates);
 }
 
-/**
- * Retrieve a session by ID.
- * @param {string} sessionId - Session ID to retrieve.
- * @returns {Object|null} The session object or null if not found/expired.
- */
 function getSession(sessionId) {
-    const session = _sessions[sessionId];
-    if (!session) {
-          return null;
-    }
-
-  // Check if the session has expired
-  if (Date.now() - session.updatedAt > SESSION_TTL_MS) {
-        delete _sessions[sessionId];
-        _save();
-        logger.info(`Session expired and removed: ${sessionId}`);
-        return null;
-  }
-
-  return session;
+  return defaultManager.getSession(sessionId);
 }
 
-/**
- * Delete a session by ID.
- * @param {string} sessionId - Session ID to delete.
- * @returns {boolean} True if deleted, false if not found.
- */
-function deleteSession(sessionId) {
-    if (!_sessions[sessionId]) {
-          return false;
-    }
-    delete _sessions[sessionId];
-    _save();
-    logger.info(`Session deleted: ${sessionId}`);
-    return true;
-}
-
-/**
- * Get or create a session: returns existing session if valid, else creates one.
- * @param {string} sessionId - Session ID.
- * @param {Object} [initialContext] - Initial context if session needs to be created.
- * @returns {Object} Session object.
- */
 function getOrCreateSession(sessionId, initialContext = {}) {
-    const existing = getSession(sessionId);
-    if (existing) {
-          return existing;
-    }
-    return createSession(sessionId, initialContext);
+  return defaultManager.getOrCreateSession(sessionId, initialContext);
 }
 
-/**
- * Append a message to the conversation history of a session.
- * @param {string} sessionId
- * @param {string} role - 'user' or 'assistant'
- * @param {string} content
- */
+function deleteSession(sessionId) {
+  return defaultManager.deleteSession(sessionId);
+}
+
 function appendMessage(sessionId, role, content) {
-    const session = getSession(sessionId);
-    if (!session) {
-          logger.warn(`appendMessage: session not found: ${sessionId}`);
-          return;
-    }
-    const history = session.context.conversationHistory || [];
-    history.push({ role, content, timestamp: Date.now() });
-    updateSession(sessionId, { conversationHistory: history });
+  return defaultManager.appendMessage(sessionId, role, content);
 }
 
-/**
- * Return count of active (non-expired) sessions.
- * @returns {number}
- */
 function getActiveSessionCount() {
-    _purgeExpired();
-    return Object.keys(_sessions).length;
+  return defaultManager.activeSessionCount;
 }
 
-module.exports = {
-    createSession,
-    updateSession,
-    getSession,
-    deleteSession,
-    getOrCreateSession,
-    appendMessage,
-    getActiveSessionCount
-};
+module.exports = SessionManager;
+module.exports.SessionRecord = SessionRecord;
+module.exports.createSession = createSession;
+module.exports.updateSession = updateSession;
+module.exports.getSession = getSession;
+module.exports.getOrCreateSession = getOrCreateSession;
+module.exports.deleteSession = deleteSession;
+module.exports.appendMessage = appendMessage;
+module.exports.getActiveSessionCount = getActiveSessionCount;

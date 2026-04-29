@@ -174,18 +174,35 @@ class NLPEngine {
    */
   parseIntent(message, context = {}) {
     const normalizedMessage = message.trim().toLowerCase();
+    const entities = this.extractEntities(message, context);
+
+    if (/how\s+(?:many|much)\s+(?:shares|contracts)(?:\s+of\s+\$?[A-Z]{1,5})?\s+(?:should|do)\s+i/i.test(message) ||
+        /position\s+siz(?:e|ing)/i.test(message) ||
+        /kelly\s+(?:criterion|formula)/i.test(message)) {
+      return { type: 'position_size', entities, confidence: 0.9, rawMessage: message };
+    }
+
+    if (/top\s+(?:stocks|picks|plays|opportunities)\s+to\s+(?:buy|trade|watch)\s+(?:today|now|this\s+week)/i.test(message)) {
+      return { type: 'best_stock_today', entities, confidence: 0.9, rawMessage: message };
+    }
+
+    if (/(?:run|test|backtest|back\s*test)/i.test(message) && /strategy/i.test(message)) {
+      return { type: 'custom_backtest', entities, confidence: 0.88, rawMessage: message };
+    }
+
+    if (/export/i.test(message) && /\b(csv|pdf|excel|xlsx)\b/i.test(message)) {
+      return { type: 'export_data', entities, confidence: 0.92, rawMessage: message };
+    }
 
     for (const { type, patterns, confidence } of this.intentPatterns) {
       for (const pattern of patterns) {
         if (pattern.test(message)) {
-          const entities = this.extractEntities(message, context);
           return { type, entities, confidence, rawMessage: message };
         }
       }
     }
 
     // Unknown intent - check if it contains a ticker with no other context
-    const entities = this.extractEntities(message, context);
     if (entities.symbol && normalizedMessage.includes(entities.symbol.toLowerCase())) {
       return {
         type: 'should_buy',
